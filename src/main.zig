@@ -7,68 +7,6 @@ const randx = @import("randx.zig");
 
 const Allocator = std.mem.Allocator;
 
-// pub fn initRandom() std.Random {
-//     const prng = std.rand.DefaultPrng.init(blk: {
-//         var seed: u64 = undefined;
-//         try std.posix.getrandom(std.mem.asBytes(&seed));
-//         break :blk seed;
-//     });
-//     return prng;
-// }
-//
-//
-
-pub fn printRandom() void {
-    const T: u64 = @intCast(std.time.timestamp());
-    var prng = std.rand.DefaultPrng.init(T); // seed chosen by dice roll
-    const random = prng.random();
-    var i: u8 = 0;
-    while (i < 10) {
-        std.debug.print("\nDice roll: {} - {}", .{ random.intRangeLessThan(u8, 0, 100), random.float(f32) });
-        i += 1;
-    }
-}
-
-// fn randomColor() !rl.Color {
-//     var seed: u64 = undefined;
-//     try std.posix.getrandom(std.mem.asBytes(&seed));
-//     var random = std.Random.DefaultPrng.init(seed);
-//     const r = random.random().uintAtMost(u8, 255);
-//     const g = random.random().uintAtMost(u8, 255);
-//     const b = random.random().uintAtMost(u8, 255);
-//     const a = random.random().uintAtMost(u8, 255);
-//
-//     return rl.Color.init(r, g, b, a);
-// }
-
-// pub fn createBall(seed: u64) Ball {
-//     // var rand = std.rand.DefaultPrng.init(@as(u64, @bitCast(std.time.milliTimestamp())));
-//     var rand = std.rand.DefaultPrng.init(seed);
-//     const randU8 = rand.random();
-//
-//     const x: f32 = @floatFromInt(randU8.intRangeLessThan(i16, 80, 700));
-//     const y: f32 = @floatFromInt(randU8.intRangeLessThan(i16, 80, 500));
-//     const size: f32 = @floatFromInt(randU8.intRangeLessThan(i16, 20, 40));
-//     const speed: f32 = @floatFromInt(randU8.intRangeLessThan(i16, 2, 8));
-//
-//     const color = randomColor() catch return Ball.init(x, y, size, speed, rl.Color.init(222, 222, 222, 222));
-//     return Ball.init(x, y, size, speed, color);
-// }
-//
-
-// pub fn initRandom() std.Random {
-//     const seed = @as(u64, undefined);
-//
-//     var prng = std.rand.DefaultPrng.init(seed);
-//     return prng.random();
-// }
-
-pub fn printRand(rand: std.Random) u32 {
-    std.debug.print("Hey {!}", .{rand});
-
-    return rand.intRangeLessThan(u32, 0, 800);
-}
-
 pub fn main() anyerror!void {
     // Initialization
     //--------------------------------------------------------------------------------------
@@ -81,10 +19,10 @@ pub fn main() anyerror!void {
 
     var frameCounter: i32 = 0;
 
-    // balls
-
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
+
+    // balls
     var balls = std.ArrayList(els.Ball).init(allocator);
     defer balls.deinit();
 
@@ -93,6 +31,8 @@ pub fn main() anyerror!void {
         try balls.append(try els.createBall());
     }
     var dead_ball: i16 = -1;
+
+    // pad
     var pad = els.Pad.init(10, 200, 20, 60);
 
     var key: rl.KeyboardKey = undefined;
@@ -132,6 +72,7 @@ pub fn main() anyerror!void {
             dead_ball = -1;
         }
 
+        // catch key pressed
         key = rl.getKeyPressed();
 
         if (key == rl.KeyboardKey.key_a) {
