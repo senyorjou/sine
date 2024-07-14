@@ -29,56 +29,32 @@ pub fn printRandom() void {
     }
 }
 
-fn randomColor() !rl.Color {
-    var seed: u64 = undefined;
-    try std.posix.getrandom(std.mem.asBytes(&seed));
-    var random = std.Random.DefaultPrng.init(seed);
-    const r = random.random().uintAtMost(u8, 255);
-    const g = random.random().uintAtMost(u8, 255);
-    const b = random.random().uintAtMost(u8, 255);
-    const a = random.random().uintAtMost(u8, 255);
+// fn randomColor() !rl.Color {
+//     var seed: u64 = undefined;
+//     try std.posix.getrandom(std.mem.asBytes(&seed));
+//     var random = std.Random.DefaultPrng.init(seed);
+//     const r = random.random().uintAtMost(u8, 255);
+//     const g = random.random().uintAtMost(u8, 255);
+//     const b = random.random().uintAtMost(u8, 255);
+//     const a = random.random().uintAtMost(u8, 255);
+//
+//     return rl.Color.init(r, g, b, a);
+// }
 
-    return rl.Color.init(r, g, b, a);
-}
-
-pub fn createBall(seed: u64) Ball {
-    // var rand = std.rand.DefaultPrng.init(@as(u64, @bitCast(std.time.milliTimestamp())));
-    var rand = std.rand.DefaultPrng.init(seed);
-    const randU8 = rand.random();
-
-    const x: f32 = @floatFromInt(randU8.intRangeLessThan(i16, 80, 700));
-    const y: f32 = @floatFromInt(randU8.intRangeLessThan(i16, 80, 500));
-    const size: f32 = @floatFromInt(randU8.intRangeLessThan(i16, 20, 40));
-    const speed: f32 = @floatFromInt(randU8.intRangeLessThan(i16, 2, 8));
-
-    const color = randomColor() catch return Ball.init(x, y, size, speed, rl.Color.init(222, 222, 222, 222));
-    return Ball.init(x, y, size, speed, color);
-}
-
-const Ball = struct {
-    pos: rl.Vector2,
-    size: rl.Vector2,
-    speed: rl.Vector2,
-    color: rl.Color,
-
-    pub fn init(x: f32, y: f32, size: f32, speed: f32, color: rl.Color) Ball {
-        return Ball{ .pos = rl.Vector2.init(x, y), .size = rl.Vector2.init(size, size), .speed = rl.Vector2.init(speed, speed), .color = color };
-    }
-
-    pub fn update(self: *Ball) void {
-        self.pos = rl.Vector2.add(self.pos, self.speed);
-        if (self.pos.x < 0 or self.pos.x + self.size.x > K.screen.width) {
-            self.speed.x *= -1;
-        }
-        if (self.pos.y < 0 or self.pos.y + self.size.y > K.screen.height) {
-            self.speed.y *= -1;
-        }
-    }
-
-    pub fn draw(self: Ball) void {
-        rl.drawRectangleV(self.pos, self.size, self.color);
-    }
-};
+// pub fn createBall(seed: u64) Ball {
+//     // var rand = std.rand.DefaultPrng.init(@as(u64, @bitCast(std.time.milliTimestamp())));
+//     var rand = std.rand.DefaultPrng.init(seed);
+//     const randU8 = rand.random();
+//
+//     const x: f32 = @floatFromInt(randU8.intRangeLessThan(i16, 80, 700));
+//     const y: f32 = @floatFromInt(randU8.intRangeLessThan(i16, 80, 500));
+//     const size: f32 = @floatFromInt(randU8.intRangeLessThan(i16, 20, 40));
+//     const speed: f32 = @floatFromInt(randU8.intRangeLessThan(i16, 2, 8));
+//
+//     const color = randomColor() catch return Ball.init(x, y, size, speed, rl.Color.init(222, 222, 222, 222));
+//     return Ball.init(x, y, size, speed, color);
+// }
+//
 
 // pub fn initRandom() std.Random {
 //     const seed = @as(u64, undefined);
@@ -105,39 +81,28 @@ pub fn main() anyerror!void {
 
     var frameCounter: i32 = 0;
 
-    const seed = @as(u64, undefined);
-
-    var prng = std.rand.DefaultPrng.init(seed);
-    const rand = prng.random();
-
     // balls
-    const R = randx.Randx.init();
-    // for (0..12) |_| {
-    //     std.debug.print("Randx {}\n", .{R.someRand()});
-    // }
-    std.debug.print("What is R? {}", .{R});
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
-    var balls = std.ArrayList(Ball).init(allocator);
+    var balls = std.ArrayList(els.Ball).init(allocator);
     defer balls.deinit();
 
-    var i: u64 = 0;
-    while (i < 20) : (i += 1) {
-        // const ball = createBall();
-        try balls.append(createBall(i));
+    var i: u8 = 0;
+    while (i < 40) : (i += 1) {
+        try balls.append(try els.createBall());
     }
+    var dead_ball: i16 = -1;
+    var pad = els.Pad.init(10, 200, 20, 60);
 
-    var pad = els.Pad.init(10, 10, 20, 60);
-
-    var randomShot = rand.intRangeLessThan(i32, 0, 100);
     var key: rl.KeyboardKey = undefined;
+
     // Main game loop
     while (!rl.windowShouldClose()) { // Detect window close button or ESC key
         // Update
         //----------------------------------------------------------------------------------
         if (@rem(frameCounter, 60) == 0) {
-            randomShot = rand.intRangeLessThan(i32, 0, 100);
+            try balls.append(try els.createBall());
         }
         frameCounter += 1;
 
@@ -152,21 +117,34 @@ pub fn main() anyerror!void {
 
         pad.draw();
 
-        for (balls.items) |*ball| {
+        // move balls
+        for (0.., balls.items) |index, *ball| {
             ball.draw();
-            ball.update();
+            ball.update(pad);
+            if (ball.isDead()) {
+                dead_ball = @as(i16, @intCast(index));
+            }
+        }
+
+        // catch dead balls
+        if (dead_ball > -1) {
+            _ = balls.swapRemove(@as(usize, @intCast(dead_ball)));
+            dead_ball = -1;
         }
 
         key = rl.getKeyPressed();
 
         if (key == rl.KeyboardKey.key_a) {
-            try balls.append(createBall(200));
+            try balls.append(try els.createBall());
         } else if (key == rl.KeyboardKey.key_d) {
             _ = balls.swapRemove(0);
-        } else if (key == rl.KeyboardKey.key_w) {
-            _ = pad.up();
-        } else if (key == rl.KeyboardKey.key_s) {
+        }
+
+        if (rl.isKeyDown(rl.KeyboardKey.key_s)) {
             _ = pad.down();
+        }
+        if (rl.isKeyDown(rl.KeyboardKey.key_w)) {
+            _ = pad.up();
         }
     }
 }
